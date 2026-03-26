@@ -4,11 +4,13 @@ Public Module API
 
     Public Function Decode(source As Byte(),
                            Optional ignoreHeader As Boolean = False,
+                           Optional ignoreFiles As Boolean = False,
                            Optional ByRef headerOut As List(Of HeaderEntry) = Nothing,
                            Optional ByRef filesOut As List(Of KeyValuePair(Of String, Byte())) = Nothing) As BToken
 
         Return Decoding.Decoder.Decode(source,
                                        ignoreHeader:=ignoreHeader,
+                                       ignoreFiles:=ignoreFiles,
                                        headerOut:=headerOut,
                                        filesOut:=filesOut)
 

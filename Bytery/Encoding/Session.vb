@@ -650,7 +650,8 @@ Namespace Encoding
         ''' - Header absence is no longer encoded inside this zone.
         ''' - When no header is present, this method writes nothing.
         ''' - Zone presence is declared by ZMSK at the container level.
-        ''' - headerByteLength covers only the serialized header entries body.
+        ''' - headerByteLength covers the complete serialized header payload
+        '''   that follows it, including the LUINT pairCount and all entries.
         ''' </summary>
         Public Sub WriteHeader(ms As Stream)
 
@@ -659,21 +660,23 @@ Namespace Encoding
 
             Dim count As Integer = _headerList.Count
 
-            Using body As New MemoryStream()
+            Using payload As New MemoryStream()
+
+                ' Write pairCount first so headerByteLength includes its serialized LUINT size.
+                Writer.WriteLUINT(CLng(count), payload)
 
                 For i As Integer = 0 To count - 1
                     Dim e = _headerList(i)
 
-                    WriteHeaderLstrLiteral(body, e.Key)
-                    body.WriteByte(CByte(e.TypeCode))
-                    WriteHeaderValue(body, e.TypeCode, e.Value)
+                    WriteHeaderLstrLiteral(payload, e.Key)
+                    payload.WriteByte(CByte(e.TypeCode))
+                    WriteHeaderValue(payload, e.TypeCode, e.Value)
                 Next
 
-                Writer.WriteLUINT(CLng(body.Length), ms)
-                Writer.WriteLUINT(CLng(count), ms)
+                Writer.WriteLUINT(CLng(payload.Length), ms)
 
-                body.Position = 0
-                body.CopyTo(ms)
+                payload.Position = 0
+                payload.CopyTo(ms)
 
             End Using
 
@@ -1661,7 +1664,8 @@ Namespace Encoding
         ''' - File names are intentionally written as literal LSTR so the FILES
         '''   zone remains self-contained and independent from StringTable policy.
         ''' - The FILES zone is omitted entirely when it has zero entries.
-        ''' - filesByteLength covers only the serialized file entries body.
+        ''' - filesByteLength covers the complete serialized FILES payload
+        '''   that follows it, including the LUINT fileCount and all file entries.
         ''' </summary>
         Public Sub WriteFilesZone(ms As Stream)
 
@@ -1669,23 +1673,25 @@ Namespace Encoding
             If _filesList.Count = 0 Then Return
 
             Dim count As Integer = _filesList.Count
-            Dim filesBodyLength As Long = 0
+            Dim filesPayloadLength As Long = Writer.GetLUINTEncodedByteCount(CLng(count))
 
             ' Pre-pass:
-            '   Compute the exact FILES body length without allocating an intermediate stream.
+            '   Compute the exact FILES payload length without allocating an
+            '   intermediate stream. The payload is:
+            '   [fileCount][file0][file1]...[fileN]
             For i As Integer = 0 To count - 1
 
                 Dim e = _filesList(i)
 
-                filesBodyLength += Writer.GetLSTREncodedByteCount(e.Key)
-                filesBodyLength += Writer.GetBarrEncodedByteCount(e.Value)
+                filesPayloadLength += Writer.GetLSTREncodedByteCount(e.Key)
+                filesPayloadLength += Writer.GetBarrEncodedByteCount(e.Value)
 
             Next
 
             ' Zone prefix:
             '   [filesByteLength][fileCount]
-            Writer.WriteLUINT(filesBodyLength, ms)
-            Writer.WriteLUINT(count, ms)
+            Writer.WriteLUINT(filesPayloadLength, ms)
+            Writer.WriteLUINT(CLng(count), ms)
 
             ' Body:
             '   [fileName:LSTR][filePayload:BARR]...

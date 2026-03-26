@@ -783,35 +783,22 @@ Namespace Decoding
 #Region "Header reader"
 
         Friend Sub SkipHeader()
-
             Dim headerBytes As Integer = CheckedLength(ReadLUINT(), "Header byteLength")
-            Dim pairCount As Integer = CheckedCount(ReadLUINT(), 1, "Header pairCount")
-
-            If pairCount = 0 Then
-                If headerBytes <> 0 Then
-                    Throw New Exception("Header byteLength must be 0 when pairCount = 0.")
-                End If
-                Return
-            End If
-
-            EnsureAvailable(headerBytes, "Header body")
+            If headerBytes < 1 Then Throw New Exception("Header byteLength cannot be 0. It must include the serialized pairCount.")
             _index += headerBytes
-
         End Sub
 
         Friend Function ReadHeader() As List(Of HeaderEntry)
 
             Dim headerBytes As Integer = CheckedLength(ReadLUINT(), "Header byteLength")
-            Dim pairCount As Integer = CheckedCount(ReadLUINT(), 1, "Header pairCount")
+            If headerBytes < 1 Then Throw New Exception("Header byteLength cannot be 0. It must include the serialized pairCount.")
+
+            ' headerBytes now covers the complete payload that follows:
+            '   [pairCount][header entries...]
+            ' so counting must start before pairCount is consumed.
             Dim startPos As Integer = _index
 
-            If pairCount = 0 Then
-                If headerBytes <> 0 Then
-                    Throw New Exception("Header byteLength must be 0 when pairCount = 0.")
-                End If
-                Return New List(Of HeaderEntry)()
-            End If
-
+            Dim pairCount As Integer = CheckedCount(ReadLUINT(), 1, "Header pairCount")
             Dim list As New List(Of HeaderEntry)(pairCount)
 
             For i As Integer = 0 To pairCount - 1
@@ -994,20 +981,9 @@ Namespace Decoding
 #Region "Files reader"
 
         Friend Sub SkipFiles()
-
-            Dim filesBytes As Integer = CheckedLength(ReadLUINT(), "Files body length")
-            Dim fileCount As Integer = CheckedCount(ReadLUINT(), 1, "Files count")
-
-            If fileCount = 0 Then
-                If filesBytes <> 0 Then
-                    Throw New Exception("FILES body length must be 0 when fileCount = 0.")
-                End If
-                Return
-            End If
-
-            EnsureAvailable(filesBytes, "Files body")
+            Dim filesBytes As Integer = CheckedLength(ReadLUINT(), "Files byteLength")
+            If filesBytes < 1 Then Throw New Exception("Files byteLength cannot be 0. It must include the serialized fileCount.")
             _index += filesBytes
-
         End Sub
 
 #End Region

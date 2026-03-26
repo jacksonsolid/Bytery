@@ -479,7 +479,7 @@ Namespace Linq
         ''' Parses Bytery bytes into a <see cref="BToken"/> tree.
         ''' </summary>
         Public Shared Function ParseBytery(data As Byte(), Optional ByRef headers As List(Of HeaderEntry) = Nothing) As BToken
-            Return Bytery.Decode(data, False, headers)
+            Return Bytery.Decode(data, False, False, headers)
         End Function
 
     End Class

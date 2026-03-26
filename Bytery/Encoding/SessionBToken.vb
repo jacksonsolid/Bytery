@@ -712,6 +712,11 @@ Namespace Encoding
 
             Using body As New MemoryStream()
 
+                ' The header payload is:
+                '   [pairCount][header entries...]
+                ' so headerByteLength includes the serialized LUINT pairCount itself.
+                Writer.WriteLUINT(CLng(count), body)
+
                 For i As Integer = 0 To count - 1
                     Dim e = _headerList(i)
 
@@ -720,8 +725,9 @@ Namespace Encoding
                     WriteHeaderValue(body, e.TypeCode, e.Value)
                 Next
 
+                ' Zone body:
+                '   [headerByteLength][pairCount][header entries...]
                 Writer.WriteLUINT(CLng(body.Length), ms)
-                Writer.WriteLUINT(CLng(count), ms)
 
                 body.Position = 0
                 body.CopyTo(ms)
@@ -1344,10 +1350,12 @@ Namespace Encoding
             If _filesList.Count = 0 Then Return
 
             Dim count As Integer = _filesList.Count
-            Dim filesBodyLength As Long = 0
+            Dim filesBodyLength As Long = Writer.GetLUINTEncodedByteCount(CLng(count))
 
             ' Pre-pass:
             '   Compute the exact FILES body length without allocating an intermediate stream.
+            '   filesBodyLength covers:
+            '   [fileCount][file0][file1]...[fileN]
             For i As Integer = 0 To count - 1
 
                 Dim e = _filesList(i)
@@ -1360,7 +1368,7 @@ Namespace Encoding
             ' Zone prefix:
             '   [filesByteLength][fileCount]
             Writer.WriteLUINT(filesBodyLength, ms)
-            Writer.WriteLUINT(count, ms)
+            Writer.WriteLUINT(CLng(count), ms)
 
             ' Body:
             '   [fileName:LSTR][filePayload:BARR]...

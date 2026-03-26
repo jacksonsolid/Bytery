@@ -345,28 +345,28 @@ Friend NotInheritable Class Viewer
 
         Console.WriteLine(":: Files ::")
 
-        Dim declaredBodyLength As Long =
+        Dim declaredBodyLength As Integer =
         r.CheckedLength(r.ReadLUINT(), "Files body length")
+
+        If declaredBodyLength < 1 Then
+            Throw New Exception("FILES body length cannot be 0. It must include the serialized fileCount.")
+        End If
+
+        Dim startPos As Integer = r.Position()
 
         Dim count As Integer =
         r.CheckedCount(r.ReadLUINT(), 1, "Files count")
+
+        If count = 0 Then
+            Throw New Exception("FILES zone must be omitted when fileCount = 0.")
+        End If
 
         Print(count, ConsoleColor.Black, ConsoleColor.Blue)
         Print("files", ConsoleColor.Blue)
         Print("bodyBytes=" & declaredBodyLength.ToString(CultureInfo.InvariantCulture), ConsoleColor.Cyan)
         Console.WriteLine()
 
-        If count = 0 Then
-            If declaredBodyLength <> 0 Then
-                Throw New Exception("FILES body length must be 0 when fileCount = 0.")
-            End If
-
-            Console.WriteLine()
-            Return
-        End If
-
         Dim seen As New HashSet(Of String)(StringComparer.Ordinal)
-        Dim actualBodyLength As Long = 0
 
         For i As Integer = 0 To count - 1
 
@@ -387,9 +387,6 @@ Friend NotInheritable Class Viewer
                 Throw New Exception("FILES zone cannot contain NULL file payloads.")
             End If
 
-            actualBodyLength += Writer.GetLSTREncodedByteCount(fileName)
-            actualBodyLength += Writer.GetBarrEncodedByteCount(b)
-
             Print("[" & i.ToString(CultureInfo.InvariantCulture) & "]", ConsoleColor.DarkGray)
             Print(fileName, ConsoleColor.White)
             Print("len=" & b.Length.ToString(CultureInfo.InvariantCulture), ConsoleColor.Cyan)
@@ -408,6 +405,8 @@ Friend NotInheritable Class Viewer
             Console.WriteLine()
 
         Next
+
+        Dim actualBodyLength As Integer = r.Position() - startPos
 
         If actualBodyLength <> declaredBodyLength Then
             Throw New Exception(
@@ -1381,21 +1380,23 @@ Friend NotInheritable Class Viewer
 
     Private Shared Sub ScanFilesZone(rr As Decoding.Reader)
 
-        Dim declaredBodyLength As Long =
+        Dim declaredBodyLength As Integer =
         rr.CheckedLength(rr.ReadLUINT(), "Files body length")
+
+        If declaredBodyLength < 1 Then
+            Throw New Exception("FILES body length cannot be 0. It must include the serialized fileCount.")
+        End If
+
+        Dim startPos As Integer = rr.Position()
 
         Dim count As Integer =
         rr.CheckedCount(rr.ReadLUINT(), 1, "Files count")
 
         If count = 0 Then
-            If declaredBodyLength <> 0 Then
-                Throw New Exception("FILES body length must be 0 when fileCount = 0.")
-            End If
-            Return
+            Throw New Exception("FILES zone must be omitted when fileCount = 0.")
         End If
 
         Dim seen As New HashSet(Of String)(StringComparer.Ordinal)
-        Dim actualBodyLength As Long = 0
 
         For i As Integer = 0 To count - 1
 
@@ -1417,14 +1418,13 @@ Friend NotInheritable Class Viewer
             Dim payload() As Byte = rr.ReadBarrOrNull(isNull)
             If isNull Then Throw New Exception("FILES zone file payload cannot be null.")
 
-            actualBodyLength += Writer.GetLUINTEncodedByteCount(checkedNameLen) + checkedNameLen
-            actualBodyLength += Writer.GetBarrEncodedByteCount(payload)
-
         Next
+
+        Dim actualBodyLength As Integer = rr.Position() - startPos
 
         If actualBodyLength <> declaredBodyLength Then
             Throw New Exception(
-                $"FILES body length mismatch in scan. Declared={declaredBodyLength}, actual={actualBodyLength}.")
+            $"FILES body length mismatch in scan. Declared={declaredBodyLength}, actual={actualBodyLength}.")
         End If
 
     End Sub

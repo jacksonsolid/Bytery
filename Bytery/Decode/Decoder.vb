@@ -1017,30 +1017,27 @@ Namespace Decoding
         ''' - File names must be non-null and non-empty.
         ''' - File payloads cannot be null.
         ''' - Duplicate file names are rejected.
-        ''' - filesByteLength covers only the serialized file entries body.
+        ''' - filesByteLength covers the complete serialized FILES payload
+        '''   that follows it, including the LUINT fileCount and all file entries.
         ''' </remarks>
         Private Sub ReadFilesZone(ByRef filesOut As List(Of KeyValuePair(Of String, Byte())))
 
-            Dim declaredBodyLength As Long =
-        R.CheckedLength(R.ReadLUINT(), "Files body length")
+            Dim declaredBodyLength As Integer = R.CheckedLength(R.ReadLUINT(), "Files body length")
 
-            Dim count As Integer =
-        R.CheckedCount(R.ReadLUINT(), 1, "Files count")
+            If declaredBodyLength < 1 Then
+                Throw New Exception("FILES body length cannot be 0. It must include the serialized fileCount.")
+            End If
+
+            Dim startPos As Integer = R.Position()
+
+            Dim count As Integer = R.CheckedCount(R.ReadLUINT(), 1, "Files count")
 
             If count = 0 Then
-
-                If declaredBodyLength <> 0 Then
-                    Throw New Exception("FILES body length must be 0 when fileCount = 0.")
-                End If
-
-                filesOut = New List(Of KeyValuePair(Of String, Byte()))()
-                Return
-
+                Throw New Exception("FILES zone must be omitted when fileCount = 0.")
             End If
 
             Dim list As New List(Of KeyValuePair(Of String, Byte()))(count)
             Dim seen As New HashSet(Of String)(StringComparer.Ordinal)
-            Dim actualBodyLength As Long = 0
 
             For i As Integer = 0 To count - 1
 
@@ -1061,16 +1058,14 @@ Namespace Decoding
                     Throw New Exception("FILES zone cannot contain NULL file payloads.")
                 End If
 
-                actualBodyLength += Writer.GetLSTREncodedByteCount(fileName)
-                actualBodyLength += Writer.GetBarrEncodedByteCount(fileData)
-
                 list.Add(New KeyValuePair(Of String, Byte())(fileName, fileData))
 
             Next
 
+            Dim actualBodyLength As Integer = R.Position() - startPos
+
             If actualBodyLength <> declaredBodyLength Then
-                Throw New Exception(
-                    $"FILES body length mismatch. Declared={declaredBodyLength}, actual={actualBodyLength}.")
+                Throw New Exception($"FILES body length mismatch. Declared={declaredBodyLength}, actual={actualBodyLength}.")
             End If
 
             filesOut = list
