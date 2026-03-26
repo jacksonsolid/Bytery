@@ -1,0 +1,455 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bytery JSON Round-Trip Demo</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0f1115;
+      --panel: #171a21;
+      --panel-2: #1d2330;
+      --text: #e7ebf3;
+      --muted: #9aa7bd;
+      --accent: #72a7ff;
+      --accent-2: #4e7fe0;
+      --border: #2a3140;
+      --error-bg: #2a1418;
+      --error-border: #6f2834;
+      --success-bg: #14281c;
+      --success-border: #2e6a47;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Inter, system-ui, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    .wrap {
+      max-width: 1360px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: 28px;
+    }
+
+    p.lead {
+      margin: 0 0 20px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .stack {
+      display: grid;
+      gap: 20px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    .grid.triple {
+      grid-template-columns: 1fr 1fr 1fr;
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 16px;
+      box-shadow: 0 8px 24px rgba(0,0,0,.25);
+    }
+
+    .card h2 {
+      margin: 0 0 12px;
+      font-size: 18px;
+    }
+
+    textarea, pre {
+      width: 100%;
+      min-height: 280px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: var(--panel-2);
+      color: var(--text);
+      padding: 14px;
+      font: 14px/1.5 Consolas, Monaco, monospace;
+      resize: vertical;
+      outline: none;
+    }
+
+    textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(114,167,255,.15);
+    }
+
+    pre {
+      margin: 0;
+      overflow: auto;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .toolbar {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin: 14px 0 0;
+    }
+
+    button {
+      border: 1px solid var(--accent-2);
+      background: var(--accent);
+      color: #07111f;
+      font-weight: 700;
+      border-radius: 12px;
+      padding: 10px 14px;
+      cursor: pointer;
+    }
+
+    button.secondary {
+      background: transparent;
+      color: var(--text);
+      border-color: var(--border);
+    }
+
+    .status {
+      margin-top: 12px;
+      padding: 12px 14px;
+      border-radius: 12px;
+      font-size: 14px;
+      line-height: 1.45;
+      display: none;
+    }
+
+    .status.success {
+      display: block;
+      background: var(--success-bg);
+      border: 1px solid var(--success-border);
+      color: #cfeeda;
+    }
+
+    .status.error {
+      display: block;
+      background: var(--error-bg);
+      border: 1px solid var(--error-border);
+      color: #ffd7de;
+    }
+
+    .meta {
+      color: var(--muted);
+      font-size: 13px;
+      margin-top: 10px;
+    }
+
+    .hint {
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    @media (max-width: 1180px) {
+      .grid,
+      .grid.triple {
+        grid-template-columns: 1fr;
+      }
+
+      textarea, pre {
+        min-height: 220px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Bytery JSON Round-Trip Demo</h1>
+    <p class="lead">
+      This example encodes a JSON-compatible value to Bytery bytes, decodes the bytes back to a value, and compares the original JSON with the round-tripped result.
+    </p>
+
+    <div class="stack">
+      <section class="card">
+        <h2>Input JSON</h2>
+        <textarea id="jsonInput" spellcheck="false">{
+  "city": "New York",
+  "id": 1,
+  "name": "John",
+  "nums": [1, 2, 3],
+  "pet": {
+    "age": 11,
+    "id": 3,
+    "name": "Toby"
+  },
+  "flags": {
+    "active": true,
+    "verified": false
+  }
+}</textarea>
+        <div class="toolbar">
+          <button id="roundTripBtn">JSON -> Bytery -> JSON</button>
+          <button id="encodeOnlyBtn" class="secondary">Encode only</button>
+          <button id="decodeBytesBtn" class="secondary">Decode bytes below</button>
+          <button id="loadExampleBtn" class="secondary">Load example</button>
+          <button id="clearBtn" class="secondary">Clear</button>
+        </div>
+        <div class="hint">
+          This page uses <code>JSON.parse</code> for the input textarea, so only JSON-compatible values are created here.
+        </div>
+        <div id="status" class="status"></div>
+        <div id="meta" class="meta"></div>
+      </section>
+
+      <section class="grid triple">
+        <div class="card">
+          <h2>Encoded Bytery bytes</h2>
+          <pre id="bytesOutput">Run the round-trip to see the generated bytes.</pre>
+        </div>
+
+        <div class="card">
+          <h2>Decoded JSON</h2>
+          <pre id="decodedOutput">Run the round-trip to see the decoded value.</pre>
+        </div>
+
+        <div class="card">
+          <h2>Comparison</h2>
+          <pre id="compareOutput">The normalized comparison result will appear here.</pre>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script type="module">
+    import Bytery from '../implementations/typescript/bytery.1.1.js';
+
+    const EXAMPLE_JSON = `{
+  "city": "New York",
+  "id": 1,
+  "name": "John",
+  "nums": [1, 2, 3],
+  "pet": {
+    "age": 11,
+    "id": 3,
+    "name": "Toby"
+  },
+  "flags": {
+    "active": true,
+    "verified": false
+  }
+}`;
+
+    const jsonInput = document.getElementById('jsonInput');
+    const bytesOutput = document.getElementById('bytesOutput');
+    const decodedOutput = document.getElementById('decodedOutput');
+    const compareOutput = document.getElementById('compareOutput');
+    const status = document.getElementById('status');
+    const meta = document.getElementById('meta');
+    const roundTripBtn = document.getElementById('roundTripBtn');
+    const encodeOnlyBtn = document.getElementById('encodeOnlyBtn');
+    const decodeBytesBtn = document.getElementById('decodeBytesBtn');
+    const loadExampleBtn = document.getElementById('loadExampleBtn');
+    const clearBtn = document.getElementById('clearBtn');
+
+    function setStatus(kind, message) {
+      status.className = `status ${kind}`;
+      status.textContent = message;
+    }
+
+    function clearStatus() {
+      status.className = 'status';
+      status.textContent = '';
+    }
+
+    function bytesToHex(bytes) {
+      return Array.from(bytes, b => b.toString(16).padStart(2, '0').toUpperCase()).join(' ');
+    }
+
+    function normalizeHexInput(text) {
+      return text
+        .replace(/0x/gi, '')
+        .replace(/[^0-9a-fA-F\s]+/g, ' ')
+        .trim();
+    }
+
+    function parseHexBytes(text) {
+      const normalized = normalizeHexInput(text);
+      if (!normalized) {
+        return new Uint8Array(0);
+      }
+
+      const parts = normalized.split(/\s+/).filter(Boolean);
+      const out = new Uint8Array(parts.length);
+
+      for (let i = 0; i < parts.length; i++) {
+        const token = parts[i];
+        if (token.length === 0 || token.length > 2) {
+          throw new Error(`Invalid hex token at position ${i + 1}: "${token}"`);
+        }
+
+        const value = Number.parseInt(token, 16);
+        if (!Number.isFinite(value) || value < 0 || value > 255) {
+          throw new Error(`Invalid hex byte at position ${i + 1}: "${token}"`);
+        }
+
+        out[i] = value;
+      }
+
+      return out;
+    }
+
+    function normalizeValue(value) {
+      if (Array.isArray(value)) {
+        return value.map(normalizeValue);
+      }
+
+      if (value && typeof value === 'object') {
+        const out = {};
+        for (const key of Object.keys(value).sort()) {
+          out[key] = normalizeValue(value[key]);
+        }
+        return out;
+      }
+
+      return value;
+    }
+
+    function safeStringify(value) {
+      return JSON.stringify(value, null, 2);
+    }
+
+    function compareValues(original, decoded) {
+      const left = safeStringify(normalizeValue(original));
+      const right = safeStringify(normalizeValue(decoded));
+      const match = left === right;
+
+      return {
+        match,
+        text: match
+          ? 'Round-trip match: YES\n\nThe normalized JSON structures are identical.'
+          : `Round-trip match: NO\n\nOriginal normalized JSON:\n${left}\n\nDecoded normalized JSON:\n${right}`
+      };
+    }
+
+    function parseJsonInput() {
+      return JSON.parse(jsonInput.value);
+    }
+
+    function encodeCurrentJson() {
+      const original = parseJsonInput();
+      const bytes = Bytery.encode(original);
+      bytesOutput.textContent = bytesToHex(bytes);
+      decodedOutput.textContent = 'Decode the bytes or run the full round-trip.';
+      compareOutput.textContent = 'Comparison will appear after decoding.';
+      meta.textContent = `${bytes.length} byte(s) written.`;
+      setStatus('success', 'JSON encoded to Bytery successfully.');
+      return { original, bytes };
+    }
+
+    async function decodeCurrentBytes() {
+      const bytes = parseHexBytes(bytesOutput.textContent);
+      if (bytes.length === 0) {
+        throw new Error('There are no encoded bytes to decode.');
+      }
+
+      const decoded = await Bytery.decode(bytes);
+      decodedOutput.textContent = safeStringify(decoded);
+      meta.textContent = `${bytes.length} byte(s) parsed.`;
+      setStatus('success', 'Bytery bytes decoded successfully.');
+      return decoded;
+    }
+
+    async function runRoundTrip() {
+      clearStatus();
+      meta.textContent = '';
+
+      try {
+        const { original, bytes } = encodeCurrentJson();
+        const decoded = await Bytery.decode(bytes);
+        decodedOutput.textContent = safeStringify(decoded);
+
+        const comparison = compareValues(original, decoded);
+        compareOutput.textContent = comparison.text;
+        meta.textContent = `${bytes.length} byte(s) written and decoded.`;
+        setStatus(comparison.match ? 'success' : 'error', comparison.match
+          ? 'Round-trip completed successfully and the normalized JSON matches.'
+          : 'Round-trip completed, but the normalized JSON does not match.');
+      } catch (err) {
+        bytesOutput.textContent = '';
+        decodedOutput.textContent = '';
+        compareOutput.textContent = '';
+        meta.textContent = '';
+        setStatus('error', err instanceof Error ? err.message : String(err));
+      }
+    }
+
+    roundTripBtn.addEventListener('click', runRoundTrip);
+
+    encodeOnlyBtn.addEventListener('click', () => {
+      clearStatus();
+      meta.textContent = '';
+
+      try {
+        encodeCurrentJson();
+      } catch (err) {
+        bytesOutput.textContent = '';
+        decodedOutput.textContent = '';
+        compareOutput.textContent = '';
+        meta.textContent = '';
+        setStatus('error', err instanceof Error ? err.message : String(err));
+      }
+    });
+
+    decodeBytesBtn.addEventListener('click', async () => {
+      clearStatus();
+      meta.textContent = '';
+
+      try {
+        const original = parseJsonInput();
+        const decoded = await decodeCurrentBytes();
+        const comparison = compareValues(original, decoded);
+        compareOutput.textContent = comparison.text;
+        setStatus(comparison.match ? 'success' : 'error', comparison.match
+          ? 'Decoded bytes match the normalized JSON input.'
+          : 'Decoded bytes do not match the normalized JSON input.');
+      } catch (err) {
+        decodedOutput.textContent = '';
+        compareOutput.textContent = '';
+        meta.textContent = '';
+        setStatus('error', err instanceof Error ? err.message : String(err));
+      }
+    });
+
+    loadExampleBtn.addEventListener('click', () => {
+      jsonInput.value = EXAMPLE_JSON;
+      bytesOutput.textContent = 'Run the round-trip to see the generated bytes.';
+      decodedOutput.textContent = 'Run the round-trip to see the decoded value.';
+      compareOutput.textContent = 'The normalized comparison result will appear here.';
+      clearStatus();
+      meta.textContent = '';
+    });
+
+    clearBtn.addEventListener('click', () => {
+      jsonInput.value = '';
+      bytesOutput.textContent = 'Run the round-trip to see the generated bytes.';
+      decodedOutput.textContent = 'Run the round-trip to see the decoded value.';
+      compareOutput.textContent = 'The normalized comparison result will appear here.';
+      clearStatus();
+      meta.textContent = '';
+      jsonInput.focus();
+    });
+
+    runRoundTrip();
+  </script>
+</body>
+</html>
+

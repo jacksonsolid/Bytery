@@ -1,0 +1,17 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<RootNamespace>Bytery</RootNamespace>
+		<TargetFrameworks>net8.0;net10.0</TargetFrameworks>
+		<OptionStrict>On</OptionStrict>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+		<WarningsAsErrors>42030,42104,42105,42106,42107,42353,42354,42355</WarningsAsErrors>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+		<WarningsAsErrors>42030,42104,42105,42106,42107,42353,42354,42355</WarningsAsErrors>
+	</PropertyGroup>
+
+</Project>

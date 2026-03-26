@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="Bytery/Bytery.vbproj" />
+  <Project Path="Test/Test.vbproj" />
+</Solution>

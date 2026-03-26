@@ -1,0 +1,8 @@
+﻿* text=auto eol=lf
+
+*.slnx text eol=crlf
+*.vb text eol=crlf
+*.vbproj text eol=crlf
+*.ts text eol=lf
+*.js text eol=lf
+*.md text eol=lf
