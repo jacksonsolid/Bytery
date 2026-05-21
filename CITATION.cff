@@ -1,0 +1,31 @@
+cff-version: 1.2.0
+title: "Bytery: A Schema-Aware Binary Serialization Protocol"
+message: "If you use Bytery, please cite it using the metadata from this file."
+type: software
+
+authors:
+  - family-names: "Porciuncula da Silva"
+    given-names: "Jackson"
+
+repository-code: "https://github.com/jacksonsolid/Bytery"
+url: "https://github.com/jacksonsolid/Bytery"
+abstract: >
+  Bytery is a schema-aware binary serialization protocol designed as a compact
+  and efficient alternative to JSON for transport and storage scenarios. It uses
+  a structured binary wire format with schema tables, string tables, date tables,
+  compact integer encodings, null-aware primitive encodings, and optional outer
+  GZIP compression.
+
+keywords:
+  - serialization
+  - binary protocol
+  - JSON
+  - codec
+  - schema-aware encoding
+  - wire format
+  - compression
+  - data transport
+
+license: MIT
+version: "1.1.0"
+date-released: "2026-03-01"
